@@ -1,10 +1,12 @@
 ﻿using System;
-using System.Linq;
-using System.Text;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Media3D;
 using PhotoScreenSaver.Lib;
+using PhotoScreenSaver.ScrennSaverPattern;
 using Screen = System.Windows.Forms.Screen;
 using Application = System.Windows.Application;
 using Cursors = System.Windows.Input.Cursors;
@@ -12,7 +14,6 @@ using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
 using SystemInformation = System.Windows.Forms.SystemInformation;
-using System.Collections.Generic;
 
 namespace PhotoScreenSaver
 {
@@ -21,9 +22,25 @@ namespace PhotoScreenSaver
 	/// </summary>
 	public partial class ScreenServerWindow
 	{
-		private readonly List<GeometryModel3D> _photos = new List<GeometryModel3D>();
+		#region properties and fields
+
+		#region const and read only
+
+		private readonly Duration CameraAnimateDuration = new Duration(TimeSpan.FromSeconds(0.5));
+
+		private readonly IEasingFunction CameraAnimationFunction = new CubicEase();
+
+		#endregion
+
+		public double WorldWidth { get; private set; }
+
+		public double WorldHeight { get; private set; }
 
 		private bool ShowDateTime{ get; set; }
+
+		private IPhotoScreenSaver _screenSaver;
+
+		#endregion
 
 		public ScreenServerWindow()
 		{
@@ -34,8 +51,21 @@ namespace PhotoScreenSaver
 			var time = TimeFormatForScreenSaver.GetTimeString(now);
 			var date = TimeFormatForScreenSaver.GetDateString(now);
 
+			ShowDateTime = true;
 			DateTime1Time.Text = time;
 			DateTime1Date.Text = date;
+
+			if (!ShowDateTime)
+			{
+				DateTime1.Visibility = Visibility.Hidden;
+				DateTime2.Visibility = Visibility.Hidden;
+			}
+			else
+			{
+				DateTime1.Opacity = 0.75;
+				DateTime2.Opacity = 0;
+			}
+			DateTimeTimer.Instance.ChangedTime += OnChangedDateTime;
 		}
 
 		public ScreenServerWindow(Screen screen)
@@ -45,19 +75,6 @@ namespace PhotoScreenSaver
 			Left = screen.Bounds.Left;
 			Top = screen.Bounds.Top;
 			ShowDateTime = screen.Primary;
-
-			DateTimeTimer.Instance.ChangedTime += OnChangedDateTime;
-
-			if (!ShowDateTime)
-			{
-				DateTime1.Visibility = Visibility.Hidden;
-				DateTime2.Visibility = Visibility.Hidden;
-			}
-			else
-			{
-				DateTime1.Opacity = 0.5;
-				DateTime2.Opacity = 0;
-			}
 
 			if (Topmost)
 			{
@@ -69,30 +86,20 @@ namespace PhotoScreenSaver
 			}
 		}
 
-		#region Overrides of FrameworkElement
-
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
 			base.OnRenderSizeChanged(sizeInfo);
-
-			var sb = new StringBuilder();
-
-			sb.AppendFormat("ActualW:{0}, ActualH:{1}", View.ActualWidth, View.ActualHeight);
-			sb.AppendLine();
-
-
-			if (_photos.Count > 0)
-			{
-				var photo = _photos[0];
-				sb.AppendFormat("X:{0}, Y:{1}, Z:{2}, SX:{3}, SY:{4}, SZ{5}",
-					photo.Bounds.X, photo.Bounds.X, photo.Bounds.Z,
-					photo.Bounds.SizeX, photo.Bounds.SizeY, photo.Bounds.Z);
-			}
-
-			DebugText.Text = sb.ToString();
+			CalcWorldSize();
 		}
 
-		#endregion
+		private void CalcWorldSize()
+		{
+			double w, h;
+			Util.CalcWorldSize(Camera.FieldOfView, Camera.Position.Z,
+				View.ActualWidth, View.ActualHeight, out w, out h);
+			WorldWidth = w;
+			WorldHeight = h;
+		}
 
 		private void ShutdownApplication()
 		{
@@ -102,7 +109,76 @@ namespace PhotoScreenSaver
 
 		private void Window_KeyDown(object sender, KeyEventArgs e)
 		{
-			ShutdownApplication();
+			if (e.IsDown)
+			{
+				if (e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl)
+				{
+					return;
+				}
+
+				if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+				{
+					var fov = 0.0;
+
+					if (e.Key == Key.Up)
+					{
+						if (10 < Camera.FieldOfView)
+						{
+							fov = Math.Max(10.0, Camera.FieldOfView - 10.0);
+						}
+					}
+					else if (e.Key == Key.Down)
+					{
+						if (Camera.FieldOfView < 90)
+						{
+							fov = Math.Min(90.0, Camera.FieldOfView + 10.0);
+						}
+					}
+					else
+					{
+						ShutdownApplication();
+						return;
+					}
+
+					if (Math.Abs(Camera.FieldOfView - fov) > 0.001)
+					{
+						Camera.BeginAnimation(PerspectiveCamera.FieldOfViewProperty,
+							new DoubleAnimation(Camera.FieldOfView, fov, CameraAnimateDuration)
+							{ EasingFunction = CameraAnimationFunction });
+					}
+					return;
+				}
+
+				var distance = 0.1;
+				var x = Camera.Position.X;
+				var y = Camera.Position.Y;
+				switch (e.Key)
+				{
+					case Key.Up:
+						y = Math.Max(-2, y - distance);
+						break;
+					case Key.Down:
+						y = Math.Min(2, y + distance);
+						break;
+					case Key.Left:
+						x = Math.Min(2, x + distance);
+						break;
+					case Key.Right:
+						x = Math.Max(-2, x - distance);
+						break;
+					default:
+						ShutdownApplication();
+						break;
+				}
+				
+				Camera.BeginAnimation(
+					ProjectionCamera.PositionProperty,
+					new Point3DAnimation(
+						Camera.Position,
+						new Point3D(x, y, Camera.Position.Z),
+						CameraAnimateDuration)
+						{ EasingFunction = CameraAnimationFunction });
+			}
 		}
 
 		private Point? _lastPosition;
@@ -126,18 +202,16 @@ namespace PhotoScreenSaver
 			}
 		}
 
-		
 		private void Window_Loaded(object sender, RoutedEventArgs e)
 		{
-			var q = Enumerable.Range(0, 32).Select(
-				n =>
-				{
-					var photo = PhotoGenerator.CreatePhoto(PhotoGenerator.TestPath);
-					ModelGroup.Children.Add(photo);
-					return photo;
-				});
+		}
 
-			_photos.AddRange(q);
+		private void RootObject_Loaded(object sender, RoutedEventArgs e)
+		{
+			CalcWorldSize();
+
+			_screenSaver = new SnapScreenSaver(this, ModelGroup, WorldWidth, WorldHeight);
+			_screenSaver.Start();
 		}
 
 		private void OnChangedDateTime(object sender, DateTimeEventArgs e)
@@ -150,7 +224,7 @@ namespace PhotoScreenSaver
 				Dispatcher.BeginInvoke(
 					new Action(()=>{
 							string storyBoardName;
-							if (DateTime1.Opacity < 0.5)
+							if (DateTime1.Opacity < 0.75)
 							{
 								DateTime1Time.Text = time;
 								DateTime1Date.Text = date;

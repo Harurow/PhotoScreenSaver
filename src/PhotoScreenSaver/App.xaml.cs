@@ -1,4 +1,7 @@
-﻿using System.Windows;
+﻿using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using PhotoScreenSaver.Lib;
 using MessageBox = System.Windows.MessageBox;
 using Screen = System.Windows.Forms.Screen;
@@ -21,7 +24,9 @@ namespace PhotoScreenSaver
 					break;
 
 				case ScreenSaverBehavior.ShowPreview:
-					Shutdown();
+					var preParent = Util.GetPreviewHandle();
+					var prev = new ScreenServerWindow();
+					preParent.RootVisual = prev.RootObject;
 					break;
 
 				case ScreenSaverBehavior.RunScreenSaver:

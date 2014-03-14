@@ -15,6 +15,7 @@
     <WarningLevel>4</WarningLevel>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <ExpressionBlendVersion>12.0.41212.0</ExpressionBlendVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -27,7 +28,6 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -40,6 +40,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -52,6 +53,10 @@
   </PropertyGroup>
   <PropertyGroup>
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Win32Resource>
+    </Win32Resource>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -71,17 +76,22 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Model\PhotoGeometry.cs" />
+    <Compile Include="Model\Texture.cs" />
+    <Compile Include="ScrennSaverPattern\PhotoScreenSaverBase.cs" />
+    <Compile Include="ScrennSaverPattern\IPhotoScreenSaver.cs" />
     <Compile Include="Lib\DateTimeEventArgs.cs" />
     <Compile Include="Lib\DateTimeTimer.cs" />
-    <Compile Include="PhotoGenerator.cs" />
-    <Compile Include="PhotoInfo.cs" />
-    <Compile Include="PhotoManager.cs" />
-    <Compile Include="RandomEx.cs" />
+    <Compile Include="Model\PhotoModel.cs" />
+    <Compile Include="Model\PhotoList.cs" />
+    <Compile Include="Lib\RandomEx.cs" />
     <Compile Include="ScreenSaverConfigure.cs" />
     <Compile Include="ScreenServerWindow.xaml.cs">
       <DependentUpon>ScreenServerWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Lib\TimeFormat.cs" />
+    <Compile Include="ScrennSaverPattern\SnapScreenSaver.cs" />
+    <Compile Include="Model\TextureManager.cs" />
     <Page Include="ConfigWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

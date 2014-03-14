@@ -67,7 +67,22 @@ namespace PhotoScreenSaver.Lib
 								| NativeWindowStyle.WS_CHILD
 								| NativeWindowStyle.WS_CLIPCHILDREN);
 
-			return new HwndSource(param);
+			var prev = new HwndSource(param);
+
+			prev.Disposed += (s, e) => Application.Current.Shutdown();
+
+			return prev;
+		}
+
+		public static void CalcWorldSize(double fieldOfView, double z,
+			double actualWidth, double actualHeight,
+			out double worldWidth, out double worldHeight)
+		{
+			var theta = fieldOfView / 2;
+			var rad = Math.PI * theta / 180.0;
+
+			worldWidth = z * Math.Tan(rad) * 2;
+			worldHeight = actualHeight * worldWidth / actualWidth;
 		}
 	}
 }
