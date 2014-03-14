@@ -71,7 +71,7 @@ namespace PhotoScreenSaver.Model
 					{
 						var path = ScreenSaverConfigure.Instance.PhotoPath;
 						_photoPath = Directory.GetFiles(path).Where(
-							s => Regex.IsMatch(s, @"(\.bmp|\.png|\.jpg|\.jpeg)$", RegexOptions.IgnoreCase)).ToArray();
+							s => Regex.IsMatch(s, @"(\.bmp|\.png|\.jpg|\.jpeg|\.jpe|\.gif|\.tif|\.tiff)$", RegexOptions.IgnoreCase)).ToArray();
 					}
 				}
 			}
